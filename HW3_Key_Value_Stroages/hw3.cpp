@@ -113,16 +113,17 @@ int main(int argc, char** argv){
 					}
 					else{
 						outfile.open(outname, ios::out | ios::app);
+						outfile << "\n";
 					}
 				
 					//key in memory
 					for(int i = 0; i < pagenum; ++i){
 						if(key1/VALUE_SIZE == pt[i].index){
 							if(pt[i].kv[key1%VALUE_SIZE].key != -1){ //get key in page
-								outfile << pt[i].kv[key1%VALUE_SIZE].value << "\n";
+								outfile << pt[i].kv[key1%VALUE_SIZE].value;
 							}
 							else{
-								outfile << "EMPTY\n";
+								outfile << "EMPTY";
 							}
 							pt[i].hittime++;
 							isHit = 1;
@@ -187,10 +188,10 @@ int main(int argc, char** argv){
 						}
 						tmpfile.close();
 						if(pt[ptnum].kv[key1%VALUE_SIZE].key != -1){ //get key in page
-							outfile << pt[ptnum].kv[key1%VALUE_SIZE].value << "\n";
+							outfile << pt[ptnum].kv[key1%VALUE_SIZE].value;
 						}
 						else{
-							outfile << "EMPTY\n";
+							outfile << "EMPTY";
 						}
 						pt[ptnum].hittime++;
 						if(ptnum == pagenum) pagenum++;
@@ -204,7 +205,6 @@ int main(int argc, char** argv){
 					isHit = 0;
 					if(isFirst == 1){  //first output
 						outfile.open(outname, ios::out | ios::trunc);
-						isFirst = 0;
 					}
 					else{
 						outfile.open(outname, ios::out | ios::app);
@@ -222,10 +222,12 @@ int main(int argc, char** argv){
 							if(keytmp1/VALUE_SIZE == pt[i].index){
 								for(long long j = keytmp1; j <= keytmp2; ++j){
 									if(pt[i].kv[j%VALUE_SIZE].key != -1){ //get key in page
-										outfile << pt[i].kv[j%VALUE_SIZE].value << "\n";
+										if(isFirst != 1) outfile << "\n"; 
+										outfile << pt[i].kv[j%VALUE_SIZE].value;
 									}
 									else{
-										outfile << "EMPTY\n";
+										if(isFirst != 1) outfile << "\n"; 
+										outfile << "EMPTY";
 									}
 									pt[i].hittime++;
 								}
@@ -297,10 +299,12 @@ int main(int argc, char** argv){
 							//get
 							for(long long j = keytmp1; j <= keytmp2; ++j){
 								if(pt[ptnum].kv[j%VALUE_SIZE].key != -1){ //get key in page
-									outfile << pt[ptnum].kv[j%VALUE_SIZE].value << "\n";
+									if(isFirst != 1) outfile << "\n"; 
+									outfile << pt[ptnum].kv[j%VALUE_SIZE].value;
 								}
 								else{
-									outfile << "EMPTY\n";
+									if(isFirst != 1) outfile << "\n"; 
+									outfile << "EMPTY";
 								}
 								pt[ptnum].hittime++;
 							}
@@ -308,6 +312,7 @@ int main(int argc, char** argv){
 						}
 					}
 					outfile.close();
+					if(isFirst == 1) isFirst = 0;
 				break;
 			}
 		}
