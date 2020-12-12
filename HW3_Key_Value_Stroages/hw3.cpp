@@ -8,8 +8,8 @@
 using namespace std;
 namespace fs = std::experimental::filesystem;
 
-#define PAGE_SIZE 10
-#define VALUE_SIZE 4
+#define PAGE_SIZE 1000
+#define VALUE_SIZE 100
 
 struct keyvalue
 {
@@ -26,14 +26,17 @@ struct pagetable
 
 
 int main(int argc, char** argv){
+	/*cout <<sizeof(int)<<endl;
+	cout << sizeof(keyvalue)<<endl;
+	cout << sizeof(pagetable)<<endl;*/
 	pagetable pt[PAGE_SIZE];
 	int pagenum = 0; //numbers of page
 	fstream infile, outfile, tmpfile;
 	string filename = argv[1];
-	string tmpname, outname;
+	string tmpname, outname,findname;
 	size_t found = filename.find_last_of("/\\");
 	size_t tail = filename.find(".input");
-	outname = filename.substr(found+1, tail-found-1);
+	findname = filename.substr(found+1, tail-found-1);
 	infile.open(filename,ios::in);
 	fs::create_directories("./storage");
 	if(infile.fail())
@@ -41,7 +44,7 @@ int main(int argc, char** argv){
 	else{
 		string str, value;
 		long long key1,key2;
-		int isHit = 0, isFirst = 1;
+		int isHit = 0, isFirst = 1, isEmpty = 1;;
 		while (infile >> str){
 			switch (str[0]){
 				case 'P': //PUT
@@ -73,7 +76,7 @@ int main(int argc, char** argv){
 							int isExist = 0; 
 							tmpname = "./storage/";
 							tmpname += to_string(key1/VALUE_SIZE);
-							tmpname += ".txt";
+							tmpname += ".tmp";
 							tmpfile.open(tmpname, ios::out|ios::app);
 							if(tmpfile.fail())
 								cout << "tmpoutfile can't open!\n";
@@ -101,26 +104,103 @@ int main(int argc, char** argv){
 								//cout << key1 <<" " << value <<"\n";
 								tmpfile.close();
 							}
-							
 						}
 					}
 				break;
 				case 'G': //GET
 					infile >> key1;
-					outname = "./" + outname;
+					outname = "./" + findname;
 					outname += ".output";
-					if(isFirst == 1){
-						//outfile.open(outname, ios::out | ios::trunc);
+					isEmpty = 1;
+					isHit = 0;
+					if(isFirst == 1){  //first output
+						outfile.open(outname, ios::out | ios::trunc);
+						isFirst = 0;
+					}
+					else{
+						outfile.open(outname, ios::out | ios::app);
 					}
 					//key in memory
 					for(int i = 0; i < pagenum; ++i){
 						if(key1/VALUE_SIZE == pt[i].index){
-							//outfile << pt[i].kv[key1%VALUE_SIZE];
+							if(pt[i].kv[key1%VALUE_SIZE].key != -1){ //get key in page
+								outfile << pt[i].kv[key1%VALUE_SIZE].value << "\n";
+							}
+							else{
+								outfile << "EMPTY\n";
+							}
+							pt[i].hittime++;
+							isHit = 1;
+							break;
 						}
 					}
+					//key isn't in memory
+					if(isHit == 0){
+						//put page which the smallest hittime into file
+						long long min = pt[0].hittime, minnum = 0;
+						for(int i = 0; i < pagenum; ++i){ //find min used page
+							if(pt[i].hittime < min){
+								min = pt[i].hittime;
+								minnum = i;
+							}
+						}
+						//put page to file
+						tmpname = "./storage/";
+						tmpname += to_string(pt[minnum].index);
+						tmpname += ".tmp";
+						tmpfile.open(tmpname, ios::out|ios::trunc);
+						if(tmpfile.fail())
+							cout << "tmpputfile1 can't open!\n";
+						for(int i = 0; i < VALUE_SIZE; ++i){
+							if(pt[minnum].kv[i].key != -1){
+								tmpfile << pt[minnum].kv[i].key << " " << pt[minnum].kv[i].value <<"\n";
+							}
+						}
+						tmpfile.close();
+						//put file which key1 is in to page
+						tmpname = "./storage/";
+						tmpname += to_string(key1/VALUE_SIZE);
+						tmpname += ".tmp";
+						tmpfile.open(tmpname, ios::out|ios::app);
+						if(tmpfile.fail())
+							cout << "tmpputfile2 can't open!\n";
+						tmpfile.close();
+						tmpname = "./storage/";
+						tmpname += to_string(key1/VALUE_SIZE);
+						tmpname += ".tmp";
+						tmpfile.open(tmpname, ios::in);
+						if(tmpfile.fail())
+							cout << "tmpputfile3 can't open!\n";
+						pt[minnum].index = key1/VALUE_SIZE;
+						pt[minnum].hittime = 0;
+						for(int i = 0; i < VALUE_SIZE; ++i){
+							pt[minnum].kv[i].key = -1;
+							pt[minnum].kv[i].value = "";
+						}
+						long long filekey;
+						string filevalue;
+						while(tmpfile >> filekey){ //store context from file to page
+							pt[minnum].kv[filekey%VALUE_SIZE].key = filekey;
+							tmpfile >> filevalue;
+							pt[minnum].kv[filekey%VALUE_SIZE].value = filevalue;
+						}
+						tmpfile.close();
+						if(pt[minnum].kv[key1%VALUE_SIZE].key != -1){ //get key in page
+							outfile << pt[minnum].kv[key1%VALUE_SIZE].value << "\n";
+						}
+						else{
+							outfile << "EMPTY\n";
+						}
+						pt[minnum].hittime++;
+					}
+					outfile.close();
 				break;
 				case 'S': //SCAN
 					infile >> key1 >> key2;
+					if(isFirst == 1){  //first output
+						outfile.open(outname, ios::out | ios::trunc);
+						isFirst = 0;
+					}
 				break;
 			}
 		}
